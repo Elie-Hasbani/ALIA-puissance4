@@ -7,226 +7,226 @@
 % ------------------------------
 
 % Initialise un plateau vide (6 lignes x 7 colonnes)
-% 'e' représente une case vide (empty)
-init_board([
-    [e, e, e, e, e, e, e],
-    [e, e, e, e, e, e, e],
-    [e, e, e, e, e, e, e],
-    [e, e, e, e, e, e, e],
-    [e, e, e, e, e, e, e],
-    [e, e, e, e, e, e, e]
+% '-' représente une case vide
+initialiser_plateau([
+    [-, -, -, -, -, -, -],
+    [-, -, -, -, -, -, -],
+    [-, -, -, -, -, -, -],
+    [-, -, -, -, -, -, -],
+    [-, -, -, -, -, -, -],
+    [-, -, -, -, -, -, -]
 ]).
 
 % ------------------------------
 %  2- AFFICHAGE DU PLATEAU
 % ------------------------------
 
-display_board(Board) :-
+afficher_plateau(Plateau) :-
     nl,
     write('+---+---+---+---+---+---+---+'), nl,
     write('| 1 | 2 | 3 | 4 | 5 | 6 | 7 |'), nl,
     write('+---+---+---+---+---+---+---+'), nl,
-    display_all_rows(Board),
+    afficher_toutes_lignes(Plateau),
     write('+---+---+---+---+---+---+---+'), nl.
 
-display_all_rows([]).
-display_all_rows([Row|Rest]) :-
-    display_one_row(Row),
-    display_all_rows(Rest).
+afficher_toutes_lignes([]).  %liste vide
+afficher_toutes_lignes([Ligne|Reste]) :-  %Cas général : il reste au moins une ligne
+    afficher_une_ligne(Ligne),   % affiche la première ligne
+    afficher_toutes_lignes(Reste).   % appelle récursivement pour le reste des lignes
 
-display_one_row(Row) :-
-    write('|'),
-    display_row_cells(Row),
+afficher_une_ligne(Ligne) :- 
+    write('|'),          
+    afficher_cellules_ligne(Ligne),  % affiche les cellules de la ligne
     nl.
 
-display_row_cells([]).
-display_row_cells([Cell|Rest]) :-
+afficher_cellules_ligne([]). % cellule vide
+afficher_cellules_ligne([Cellule|Reste]) :-
     write(' '),
-    write(Cell),
+    write(Cellule),
     write(' |'),
-    display_row_cells(Rest).
+    afficher_cellules_ligne(Reste).
 
 % ------------------------------
 %  3- INSERTION D'UN PION
 % ------------------------------
 
 % Insère un pion dans une colonne (le pion tombe au plus bas)
-insert_token(Board, Col, Player, NewBoard) :-
+inserer_pion(Plateau, Col, Joueur, NouveauPlateau) :-
     Col >= 1, Col =< 7,
-    transpose(Board, Transposed),
-    nth1(Col, Transposed, Column),
-    reverse(Column, ReversedColumn),
-    insert_in_reversed_column(ReversedColumn, Player, UpdatedReversedColumn),
-    reverse(UpdatedReversedColumn, UpdatedColumn),
-    replace_nth(Transposed, Col, UpdatedColumn, UpdatedTransposed),
-    transpose(UpdatedTransposed, NewBoard).
+    transposer(Plateau, Transpose),
+    nth1(Col, Transpose, Colonne),
+    reverse(Colonne, ColonneInversee),
+    inserer_dans_colonne_inversee(ColonneInversee, Joueur, ColonneInverseeMaj),
+    reverse(ColonneInverseeMaj, ColonneMaj),
+    remplacer_nieme(Transpose, Col, ColonneMaj, TransposeMaj),
+    transposer(TransposeMaj, NouveauPlateau).
 
 % Insère le pion dans la première case vide (en partant du bas)
-insert_in_reversed_column([e|Rest], Player, [Player|Rest]) :- !.
-insert_in_reversed_column([Cell|Rest], Player, [Cell|UpdatedRest]) :-
-    Cell \= e,
-    insert_in_reversed_column(Rest, Player, UpdatedRest).
+inserer_dans_colonne_inversee([-|Reste], Joueur, [Joueur|Reste]) :- !.
+inserer_dans_colonne_inversee([Cellule|Reste], Joueur, [Cellule|ResteMaj]) :-
+    Cellule \= -,
+    inserer_dans_colonne_inversee(Reste, Joueur, ResteMaj).
 
 % ------------------------------
 %  4- VALIDATION DES COUPS
 % ------------------------------
 
 % Vérifie si une colonne est valide et non pleine
-valid_move(Board, Col) :-
+coup_valide(Plateau, Col) :-
     integer(Col),
     Col >= 1,
     Col =< 7,
-    transpose(Board, Transposed),
-    nth1(Col, Transposed, Column),
-    member(e, Column).
+    transposer(Plateau, Transpose),
+    nth1(Col, Transpose, Colonne),
+    member(-, Colonne).
 
 % ------------------------------
 %  5- DÉTECTION DE VICTOIRE
 % ------------------------------
 
 % Un joueur gagne s'il a 4 pions alignés
-win(Board, Player) :-
-    (   horizontal_win(Board, Player)
-    ;   vertical_win(Board, Player)
-    ;   diagonal_win(Board, Player)
+victoire(Plateau, Joueur) :-
+    (   victoire_horizontale(Plateau, Joueur)
+    ;   victoire_verticale(Plateau, Joueur)
+    ;   victoire_diagonale(Plateau, Joueur)
     ).
 
 % Victoire horizontale (4 pions alignés sur une ligne)
-horizontal_win(Board, Player) :-
-    member(Row, Board),
-    consecutive_four(Row, Player).
+victoire_horizontale(Plateau, Joueur) :-
+    member(Ligne, Plateau),
+    quatre_consecutifs(Ligne, Joueur).
 
 % Victoire verticale (4 pions alignés sur une colonne)
-vertical_win(Board, Player) :-
-    transpose(Board, Transposed),
-    member(Column, Transposed),
-    consecutive_four(Column, Player).
+victoire_verticale(Plateau, Joueur) :-
+    transposer(Plateau, Transpose),
+    member(Colonne, Transpose),
+    quatre_consecutifs(Colonne, Joueur).
 
 % Victoire diagonale (4 pions alignés en diagonale)
-diagonal_win(Board, Player) :-
-    (   diagonal_desc(Board, Player)
-    ;   diagonal_asc(Board, Player)
+victoire_diagonale(Plateau, Joueur) :-
+    (   diagonale_desc(Plateau, Joueur)
+    ;   diagonale_asc(Plateau, Joueur)
     ).
 
 % Vérifie 4 éléments consécutifs identiques dans une liste
-consecutive_four(List, Player) :-
-    append(_, [Player, Player, Player, Player|_], List).
+quatre_consecutifs(Liste, Joueur) :-
+    append(_, [Joueur, Joueur, Joueur, Joueur|_], Liste).
 
 % Diagonales descendantes (\)
-diagonal_desc(Board, Player) :-
-    between(1, 6, Row),
+diagonale_desc(Plateau, Joueur) :-
+    between(1, 6, Ligne),
     between(1, 7, Col),
-    check_diagonal_desc(Board, Row, Col, Player, 0).
+    verifier_diagonale_desc(Plateau, Ligne, Col, Joueur, 0).
 
-check_diagonal_desc(_, Row, Col, _, 4) :- !.
-check_diagonal_desc(Board, Row, Col, Player, Count) :-
-    Row =< 6, Col =< 7,
-    nth1(Row, Board, Line),
-    nth1(Col, Line, Cell),
-    Cell == Player,
-    Count1 is Count + 1,
-    Row1 is Row + 1,
+verifier_diagonale_desc(_, Ligne, Col, _, 4) :- !.
+verifier_diagonale_desc(Plateau, Ligne, Col, Joueur, Compteur) :-
+    Ligne =< 6, Col =< 7,
+    nth1(Ligne, Plateau, LignePlateau),
+    nth1(Col, LignePlateau, Cellule),
+    Cellule == Joueur,
+    Compteur1 is Compteur + 1,
+    Ligne1 is Ligne + 1,
     Col1 is Col + 1,
-    check_diagonal_desc(Board, Row1, Col1, Player, Count1).
+    verifier_diagonale_desc(Plateau, Ligne1, Col1, Joueur, Compteur1).
 
 % Diagonales ascendantes (/)
-diagonal_asc(Board, Player) :-
-    between(1, 6, Row),
+diagonale_asc(Plateau, Joueur) :-
+    between(1, 6, Ligne),
     between(1, 7, Col),
-    check_diagonal_asc(Board, Row, Col, Player, 0).
+    verifier_diagonale_asc(Plateau, Ligne, Col, Joueur, 0).
 
-check_diagonal_asc(_, Row, Col, _, 4) :- !.
-check_diagonal_asc(Board, Row, Col, Player, Count) :-
-    Row >= 1, Col =< 7,
-    nth1(Row, Board, Line),
-    nth1(Col, Line, Cell),
-    Cell == Player,
-    Count1 is Count + 1,
-    Row1 is Row - 1,
+verifier_diagonale_asc(_, Ligne, Col, _, 4) :- !.
+verifier_diagonale_asc(Plateau, Ligne, Col, Joueur, Compteur) :-
+    Ligne >= 1, Col =< 7,
+    nth1(Ligne, Plateau, LignePlateau),
+    nth1(Col, LignePlateau, Cellule),
+    Cellule == Joueur,
+    Compteur1 is Compteur + 1,
+    Ligne1 is Ligne - 1,
     Col1 is Col + 1,
-    check_diagonal_asc(Board, Row1, Col1, Player, Count1).
+    verifier_diagonale_asc(Plateau, Ligne1, Col1, Joueur, Compteur1).
 
 % ------------------------------
 %  6- DÉTECTION DE MATCH NUL
 % ------------------------------
 
 % Le plateau est plein si aucune case vide n'existe
-board_full(Board) :-
-    \+ (member(Row, Board), member(e, Row)).
+plateau_plein(Plateau) :-
+    \+ (member(Ligne, Plateau), member(-, Ligne)).
 
 % ------------------------------
 %  7- ALTERNANCE DES JOUEURS
 % ------------------------------
 
-next_player(x, o).
-next_player(o, x).
+joueur_suivant(x, o).
+joueur_suivant(o, x).
 
 % ------------------------------
 %  8- BOUCLE PRINCIPALE DU JEU
 % ------------------------------
 
 % Démarre le jeu
-play :-
+jouer :-
     nl,
     write('========================================'), nl,
     write('     BIENVENUE AU PUISSANCE 4 !'), nl,
     write('========================================'), nl,
     write('Joueur X commence'), nl,
-    init_board(Board),
-    display_board(Board),
-    play_turn(Board, x).
+    initialiser_plateau(Plateau),
+    afficher_plateau(Plateau),
+    jouer_tour(Plateau, x).
 
 % Tour de jeu
-play_turn(Board, Player) :-
+jouer_tour(Plateau, Joueur) :-
     % Vérifier si match nul
-    (   board_full(Board)
+    (   plateau_plein(Plateau)
     ->  nl,
         write('========================================'), nl,
         write('        MATCH NUL !'), nl,
         write('========================================'), nl,
-        ask_replay
+        demander_rejouer
     ;   % Sinon, demander le coup du joueur
         nl,
-        format('--- Tour du Joueur ~w ---~n', [Player]),
-        format('Joueur ~w, choisissez une colonne (1-7): ', [Player]),
+        format('--- Tour du Joueur ~w ---~n', [Joueur]),
+        format('Joueur ~w, choisissez une colonne (1-7): ', [Joueur]),
         read(Col),
-        (   valid_move(Board, Col)
+        (   coup_valide(Plateau, Col)
         ->  % Coup valide
-            insert_token(Board, Col, Player, NewBoard),
+            inserer_pion(Plateau, Col, Joueur, NouveauPlateau),
             nl,
             write('--- Après votre coup ---'), nl,
-            display_board(NewBoard),
-            (   win(NewBoard, Player)
+            afficher_plateau(NouveauPlateau),
+            (   victoire(NouveauPlateau, Joueur)
             ->  % Victoire !
                 nl,
                 write('========================================'), nl,
-                format('    JOUEUR ~w GAGNE !!!~n', [Player]),
+                format('    JOUEUR ~w GAGNE !!!~n', [Joueur]),
                 write('========================================'), nl,
-                ask_replay
+                demander_rejouer
             ;   % Continuer le jeu
-                next_player(Player, NextPlayer),
-                play_turn(NewBoard, NextPlayer)
+                joueur_suivant(Joueur, JoueurSuivant),
+                jouer_tour(NouveauPlateau, JoueurSuivant)
             )
         ;   % Coup invalide
             nl,
             write('!! COUP INVALIDE !! La colonne est pleine ou invalide.'), nl,
             write('Veuillez choisir une autre colonne.'), nl,
-            play_turn(Board, Player)
+            jouer_tour(Plateau, Joueur)
         )
     ).
 
 % Demander si les joueurs veulent rejouer
-ask_replay :-
+demander_rejouer :-
     nl,
     write('Voulez-vous rejouer ? (o/n): '),
-    read(Choice),
-    (   (Choice = o ; Choice = 'o')
-    ->  play
-    ;   (Choice = n ; Choice = 'n')
+    read(Choix),
+    (   (Choix = o ; Choix = 'o')
+    ->  jouer
+    ;   (Choix = n ; Choix = 'n')
     ->  nl,
         write('Merci d\'avoir joué ! Au revoir.'), nl
     ;   write('Réponse invalide. Veuillez répondre par o ou n.'), nl,
-        ask_replay
+        demander_rejouer
     ).
 
 % ------------------------------
@@ -234,22 +234,22 @@ ask_replay :-
 % ------------------------------
 
 % Transpose une matrice (lignes <-> colonnes)
-transpose([[]|_], []) :- !.
-transpose(Matrix, [Col|Cols]) :-
-    maplist(head_tail, Matrix, Col, RestMatrix),
-    transpose(RestMatrix, Cols).
+transposer([[]|_], []) :- !.
+transposer(Matrice, [Col|Cols]) :-
+    maplist(tete_queue, Matrice, Col, ResteMatrice),
+    transposer(ResteMatrice, Cols).
 
-head_tail([H|T], H, T).
+tete_queue([T|Q], T, Q).
 
 % Remplace le N-ième élément d'une liste
-replace_nth([_|T], 1, X, [X|T]) :- !.
-replace_nth([H|T], N, X, [H|R]) :-
+remplacer_nieme([_|Q], 1, X, [X|Q]) :- !.
+remplacer_nieme([T|Q], N, X, [T|R]) :-
     N > 1,
     N1 is N - 1,
-    replace_nth(T, N1, X, R).
+    remplacer_nieme(Q, N1, X, R).
 
 % ------------------------------
 %  10- POINT D'ENTRÉE
 % ------------------------------
 
-% Pour lancer le jeu, tapez: ?- play.
+% Pour lancer le jeu, tapez: ?- jouer.
