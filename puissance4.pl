@@ -1,7 +1,12 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %         PUISSANCE 4 - DEUX JOUEURS HUMAINS        %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+:- module(puissance4, [play/0]).
 
+:- use_module(library(random)).
+:- use_module(ai_random).
+:- use_module(utils).
+:- use_module(library(clpfd)). 
 % ------------------------------
 %  1- INITIALISATION DU PLATEAU
 % ------------------------------
@@ -71,14 +76,7 @@ insert_in_reversed_column([Cell|Rest], Player, [Cell|UpdatedRest]) :-
 %  4- VALIDATION DES COUPS
 % ------------------------------
 
-% Vérifie si une colonne est valide et non pleine
-valid_move(Board, Col) :-
-    integer(Col),
-    Col >= 1,
-    Col =< 7,
-    transpose(Board, Transposed),
-    nth1(Col, Transposed, Column),
-    member(e, Column).
+%regarder fichier utils.pl
 
 % ------------------------------
 %  5- DÉTECTION DE VICTOIRE
@@ -167,51 +165,89 @@ next_player(o, x).
 
 % Démarre le jeu
 play :-
-    nl,
+  nl,
     write('========================================'), nl,
     write('     BIENVENUE AU PUISSANCE 4 !'), nl,
     write('========================================'), nl,
-    write('Joueur X commence'), nl,
-    init_board(Board),
-    display_board(Board),
-    play_turn(Board, x).
+    nl,
+    write('1. Joueur vs Joueur'), nl,
+    write('2. Joueur vs IA (random)'), nl,
+    nl,
+    write('Choisissez une option (1-2) : '),
+    read(Choice),
+    (   Choice = 1
+    ->  init_board(Board),
+        display_board(Board),
+        play_turn(Board, x, pvp, x)
+    ;   Choice = 2
+    ->  write('Voulez-vous jouer avec x ou o ? (x/o) : '),
+        read(H),
+        (   (H = x ; H = o)
+        ->  init_board(Board),
+            display_board(Board),
+            play_turn(Board, x, pva, H)
+        ;   write('Symbole invalide.'), nl,
+            play
+        )
+    ;   write('Choix invalide.'), nl,
+        play
+    ).
 
 % Tour de jeu
-play_turn(Board, Player) :-
-    % Vérifier si match nul
+play_turn(Board, Player, Mode, HumanPlayer) :-
     (   board_full(Board)
     ->  nl,
         write('========================================'), nl,
         write('        MATCH NUL !'), nl,
         write('========================================'), nl,
         ask_replay
-    ;   % Sinon, demander le coup du joueur
-        nl,
+    ;   nl,
         format('--- Tour du Joueur ~w ---~n', [Player]),
-        format('Joueur ~w, choisissez une colonne (1-7): ', [Player]),
-        read(Col),
-        (   valid_move(Board, Col)
-        ->  % Coup valide
-            insert_token(Board, Col, Player, NewBoard),
-            nl,
-            write('--- Après votre coup ---'), nl,
-            display_board(NewBoard),
-            (   win(NewBoard, Player)
-            ->  % Victoire !
+        % déterminer si c'est un humain ou l'IA qui joue
+        (   Mode = pva, Player \= HumanPlayer
+        ->  % tour de l'IA
+            ia_random(Board, Col, Player),
+            format('IA choisit la colonne ~w.~n', [Col]),
+            (   valid_move(Board, Col)
+            ->  insert_token(Board, Col, Player, NewBoard),
                 nl,
-                write('========================================'), nl,
-                format('    JOUEUR ~w GAGNE !!!~n', [Player]),
-                write('========================================'), nl,
-                ask_replay
-            ;   % Continuer le jeu
-                next_player(Player, NextPlayer),
-                play_turn(NewBoard, NextPlayer)
+                write('--- Après le coup de l\'IA ---'), nl,
+                display_board(NewBoard),
+                (   win(NewBoard, Player)
+                ->  nl,
+                    write('========================================'), nl,
+                    format('    JOUEUR ~w (IA) GAGNE !!!~n', [Player]),
+                    write('========================================'), nl,
+                    ask_replay
+                ;   next_player(Player, NextPlayer),
+                    play_turn(NewBoard, NextPlayer, Mode, HumanPlayer)
+                )
+            ;   % improbable car ia_random choisit une colonne valide, mais on sécurise
+                write('IA a choisi un coup invalide, nouvel essai...'), nl,
+                play_turn(Board, Player, Mode, HumanPlayer)
             )
-        ;   % Coup invalide
-            nl,
-            write('!! COUP INVALIDE !! La colonne est pleine ou invalide.'), nl,
-            write('Veuillez choisir une autre colonne.'), nl,
-            play_turn(Board, Player)
+        ;   % tour d'un humain
+            format('Joueur ~w, choisissez une colonne (1-7): ', [Player]),
+            read(Col),
+            (   valid_move(Board, Col)
+            ->  insert_token(Board, Col, Player, NewBoard),
+                nl,
+                write('--- Après votre coup ---'), nl,
+                display_board(NewBoard),
+                (   win(NewBoard, Player)
+                ->  nl,
+                    write('========================================'), nl,
+                    format('    JOUEUR ~w GAGNE !!!~n', [Player]),
+                    write('========================================'), nl,
+                    ask_replay
+                ;   next_player(Player, NextPlayer),
+                    play_turn(NewBoard, NextPlayer, Mode, HumanPlayer)
+                )
+            ;   nl,
+                write('!! COUP INVALIDE !! La colonne est pleine ou invalide.'), nl,
+                write('Veuillez choisir une autre colonne.'), nl,
+                play_turn(Board, Player, Mode, HumanPlayer)
+            )
         )
     ).
 
@@ -233,13 +269,7 @@ ask_replay :-
 %  9- UTILITAIRES
 % ------------------------------
 
-% Transpose une matrice (lignes <-> colonnes)
-transpose([[]|_], []) :- !.
-transpose(Matrix, [Col|Cols]) :-
-    maplist(head_tail, Matrix, Col, RestMatrix),
-    transpose(RestMatrix, Cols).
 
-head_tail([H|T], H, T).
 
 % Remplace le N-ième élément d'une liste
 replace_nth([_|T], 1, X, [X|T]) :- !.
