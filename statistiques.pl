@@ -25,10 +25,11 @@ menu_stats :-
     write('1. IA Random vs IA Heuristique'), nl,
     write('2. IA Random vs IA Alpha-Beta'), nl,
     write('3. IA Heuristique vs IA Alpha-Beta'), nl,
-    write('4. Tournoi complet (toutes les IAs)'), nl,
-    write('5. Retour au menu principal'), nl,
+    write('4. IA Alpha-Beta vs IA Alpha-Beta (profondeurs differentes)'), nl,
+    write('5. Tournoi complet (toutes les IAs)'), nl,
+    write('6. Retour au menu principal'), nl,
     nl,
-    write('Votre choix (1-5): '),
+    write('Votre choix (1-6): '),
     read(Choix),
     traiter_choix_stats(Choix).
 
@@ -54,7 +55,17 @@ traiter_choix_stats(3) :-  % Heuristique vs Alpha-Beta
     read(Prof),
     jouer_tournoi_alphabeta(heuristique, alphabeta, N, Prof).
 
-traiter_choix_stats(4) :- % Tournoi complet
+traiter_choix_stats(4) :- % Alpha-Beta vs Alpha-Beta
+    nl,
+    write('Combien de parties? '),
+    read(N),
+    write('Profondeur pour IA Alpha-Beta 1 (ex: 4)? '),
+    read(Prof1),
+    write('Profondeur pour IA Alpha-Beta 2 (ex: 6)? '),
+    read(Prof2),
+    jouer_tournoi_alphabeta_vs_alphabeta(alphabeta, alphabeta, N, Prof1, Prof2).
+
+traiter_choix_stats(5) :- % Tournoi complet
     nl,
     write('Combien de parties par match? '),
     read(N),
@@ -62,7 +73,7 @@ traiter_choix_stats(4) :- % Tournoi complet
     read(Prof),
     tournoi_complet(N, Prof).
 
-traiter_choix_stats(5) :- % Retour au menu principal
+traiter_choix_stats(6) :- % Retour au menu principal
     nl,
     menu.
 
@@ -191,6 +202,35 @@ jouer_tournoi_alphabeta_silencieux(IA1, IA2, N, Prof, V1, V2, Nuls) :-
     jouer_n_parties_alphabeta(IA1, IA2, N, Prof, 0, 0, 0, V1, V2, Nuls).
 
 
+%  JOUER UN TOURNOI (Alpha-Beta vs Alpha-Beta avec profondeurs différentes)
+
+jouer_tournoi_alphabeta_vs_alphabeta(IA1, IA2, N, Prof1, Prof2) :-
+    jouer_tournoi_alphabeta_vs_alphabeta_silencieux(IA1, IA2, N, Prof1, Prof2, V1, V2, Nuls),
+    
+    nl,
+    write('========================================'), nl,
+    write('      RESULTATS DU TOURNOI'), nl,
+    write('========================================'), nl,
+    format('Parties jouees: ~w~n', [N]),
+    nl,
+    format('IA ~w (profondeur ~w): ~w victoires~n', [IA1, Prof1, V1]),
+    format('IA ~w (profondeur ~w): ~w victoires~n', [IA2, Prof2, V2]),
+    format('Matchs nuls: ~w~n', [Nuls]),
+    nl,
+    
+    (   V1 > V2
+    ->  format('>>> GAGNANT: IA ~w (profondeur ~w) <<<~n', [IA1, Prof1])
+    ;   V2 > V1
+    ->  format('>>> GAGNANT: IA ~w (profondeur ~w) <<<~n', [IA2, Prof2])
+    ;   write('>>> EGALITE <<<'), nl
+    ),
+    nl,
+    menu_stats.
+
+jouer_tournoi_alphabeta_vs_alphabeta_silencieux(IA1, IA2, N, Prof1, Prof2, V1, V2, Nuls) :-
+    jouer_n_parties_alphabeta_vs_alphabeta(IA1, IA2, N, Prof1, Prof2, 0, 0, 0, V1, V2, Nuls).
+
+
 %  JOUER N PARTIES (sans Alpha-Beta)
 
 jouer_n_parties(_, _, 0, V1, V2, Nuls, V1, V2, Nuls) :- !.
@@ -231,6 +271,27 @@ jouer_n_parties_alphabeta(IA1, IA2, N, Prof, V1Acc, V2Acc, NulsAcc, V1Final, V2F
     
     N1 is N - 1,
     jouer_n_parties_alphabeta(IA1, IA2, N1, Prof, V1New, V2New, NulsNew, V1Final, V2Final, NulsFinal).
+
+
+%  JOUER N PARTIES (Alpha-Beta vs Alpha-Beta avec profondeurs différentes)
+
+jouer_n_parties_alphabeta_vs_alphabeta(_, _, 0, _, _, V1, V2, Nuls, V1, V2, Nuls) :- !.
+jouer_n_parties_alphabeta_vs_alphabeta(IA1, IA2, N, Prof1, Prof2, V1Acc, V2Acc, NulsAcc, V1Final, V2Final, NulsFinal) :-
+    N > 0,
+    format('Partie ~w/~w...', [N, N]),
+    initialiser_plateau(Plateau),
+    jouer_partie_ia_vs_ia_alphabeta_double(Plateau, x, IA1, IA2, Prof1, Prof2, Resultat),
+    format(' ~w~n', [Resultat]),
+    
+    (   Resultat = ia1_gagne
+    ->  V1New is V1Acc + 1, V2New = V2Acc, NulsNew = NulsAcc
+    ;   Resultat = ia2_gagne
+    ->  V1New = V1Acc, V2New is V2Acc + 1, NulsNew = NulsAcc
+    ;   V1New = V1Acc, V2New = V2Acc, NulsNew is NulsAcc + 1
+    ),
+    
+    N1 is N - 1,
+    jouer_n_parties_alphabeta_vs_alphabeta(IA1, IA2, N1, Prof1, Prof2, V1New, V2New, NulsNew, V1Final, V2Final, NulsFinal).
 
 
 %  JOUER UNE PARTIE IA vs IA (sans Alpha-Beta)
@@ -282,6 +343,32 @@ jouer_partie_ia_vs_ia_alphabeta(Plateau, Joueur, IA1, IA2, Prof, Resultat) :-
     ->  Resultat = ResultatVictoire
     ;   joueur_suivant(Joueur, Suivant),
         jouer_partie_ia_vs_ia_alphabeta(NouveauPlateau, Suivant, IA1, IA2, Prof, Resultat)
+    ).
+
+
+%  JOUER UNE PARTIE IA vs IA (Alpha-Beta vs Alpha-Beta avec profondeurs différentes)
+
+jouer_partie_ia_vs_ia_alphabeta_double(Plateau, _, _, _, _, _, nul) :-
+    plateau_plein(Plateau), !.
+
+jouer_partie_ia_vs_ia_alphabeta_double(Plateau, Joueur, IA1, IA2, Prof1, Prof2, Resultat) :-
+    \+ plateau_plein(Plateau),
+    
+    % Détermine quelle IA joue et sa profondeur
+    (   Joueur = x
+    ->  IAActive = IA1, ProfActive = Prof1, ResultatVictoire = ia1_gagne
+    ;   IAActive = IA2, ProfActive = Prof2, ResultatVictoire = ia2_gagne
+    ),
+    
+    % L'IA choisit un coup avec sa profondeur spécifique
+    choisir_coup_ia_alphabeta(Plateau, Joueur, IAActive, ProfActive, Col),
+    inserer_pion(Plateau, Col, Joueur, NouveauPlateau),
+    
+    % Vérifie la victoire
+    (   victoire(NouveauPlateau, Joueur)
+    ->  Resultat = ResultatVictoire
+    ;   joueur_suivant(Joueur, Suivant),
+        jouer_partie_ia_vs_ia_alphabeta_double(NouveauPlateau, Suivant, IA1, IA2, Prof1, Prof2, Resultat)
     ).
 
 
