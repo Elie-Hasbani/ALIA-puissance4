@@ -3,6 +3,7 @@
 :- [ia_random].
 :- [ia_heuristique].
 :- [ia_alphabeta].
+:- [statistiques].
 
 % 1. MENU PRINCIPAL
 
@@ -17,9 +18,10 @@ menu :-
     write('2. Humain vs IA Random'), nl,
     write('3. Humain vs IA Heuristique'), nl,
     write('4. Humain vs IA Alpha-Beta'), nl,
-    write('5. Quitter'), nl,
+    write('5. Statistiques / Tournoi'), nl,
+    write('6. Quitter'), nl,
     nl,
-    write('Votre choix (1-5): '),
+    write('Votre choix (1-6): '),
     read(Choix),
     traiter_choix(Choix).
 
@@ -109,11 +111,15 @@ traiter_choix(4) :-
 
 traiter_choix(5) :-
     nl,
+    menu_stats.
+
+traiter_choix(6) :-
+    nl,
     write('Au revoir!'), nl.
 
 traiter_choix(_) :-
     nl,
-    write('Choix invalide. Veuillez choisir entre 1 et 5.'), nl,
+    write('Choix invalide. Veuillez choisir entre 1 et 6.'), nl,
     menu.
 
 % ------------------------------
