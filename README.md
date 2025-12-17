@@ -8,6 +8,8 @@ Un jeu de Puissance 4 en Prolog avec plusieurs IA.
 swipl -s menu.pl
 ```
 
+Ensuite tape `menu.` pour lancer le menu.
+
 ## Menu
 
 Le jeu propose plusieurs modes :
@@ -29,5 +31,3 @@ Le menu statistiques permet de faire s'affronter les IA entre elles :
 5. **Tournoi complet** - Toutes les IA s'affrontent, avec classement final
 
 Pour chaque test, tu choisis combien de parties jouer. Le système affiche les victoires, défaites et matchs nuls de chaque IA.
-
-
